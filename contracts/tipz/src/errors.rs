@@ -36,4 +36,6 @@ pub enum ContractError {
     NotFound = 14,
     /// Arithmetic overflow during fee calculation
     OverflowError = 15,
+    /// Image URL exceeds 256 characters
+    InvalidImageUrl = 16,
 }

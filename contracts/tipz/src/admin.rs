@@ -15,6 +15,7 @@ pub fn initialize(
     admin: &Address,
     fee_collector: &Address,
     fee_bps: u32,
+    native_token: &Address,
 ) -> Result<(), ContractError> {
     // Check not already initialized
     if env.storage().instance().has(&DataKey::Initialized) {
@@ -43,6 +44,9 @@ pub fn initialize(
     env.storage()
         .instance()
         .set(&DataKey::TotalTipsVolume, &0_i128);
+    env.storage()
+        .instance()
+        .set(&DataKey::NativeToken, native_token);
 
     Ok(())
 }

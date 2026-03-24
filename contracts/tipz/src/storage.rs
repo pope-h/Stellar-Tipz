@@ -29,6 +29,8 @@ pub enum DataKey {
     TotalTipsVolume,
     /// Flag indicating contract is initialized
     Initialized,
+    /// Native XLM token contract address (SAC)
+    NativeToken,
 }
 
 // ──────────────────────────────────────────────

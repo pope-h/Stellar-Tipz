@@ -11,14 +11,13 @@
 //! - AdminChanged(old_admin, new_admin)
 //! - FeeUpdated(old_fee, new_fee)
 
-// TODO: Implement event emission helpers in issue #6
-//
-// Example:
-// use soroban_sdk::{Address, Env, Symbol, symbol_short};
-//
-// pub fn emit_tip_sent(env: &Env, from: &Address, to: &Address, amount: i128) {
-//     env.events().publish(
-//         (symbol_short!("tip"), symbol_short!("sent")),
-//         (from, to, amount),
-//     );
-// }
+// TODO: Implement remaining event emission helpers in issue #6
+
+use soroban_sdk::{symbol_short, Address, Env};
+
+pub fn emit_tip_sent(env: &Env, from: &Address, to: &Address, amount: i128) {
+    env.events().publish(
+        (symbol_short!("tip"), symbol_short!("sent")),
+        (from, to, amount),
+    );
+}

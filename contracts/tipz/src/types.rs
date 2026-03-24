@@ -4,7 +4,7 @@ use soroban_sdk::{contracttype, Address, String};
 
 /// Creator profile stored on-chain.
 #[contracttype]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Profile {
     /// Stellar address of the creator
     pub owner: Address,
