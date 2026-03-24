@@ -35,7 +35,7 @@
 use soroban_sdk::{Address, Env};
 
 use crate::errors::ContractError;
-use crate::storage::DataKey;
+use crate::storage;
 use crate::types::{CreditTier, Profile};
 
 /// Base score awarded to every registered profile.
@@ -73,18 +73,16 @@ pub fn calculate_credit_score(profile: &Profile, now: u64) -> u32 {
 
     // ── X metrics sub-score (0–100) ──────────────────────────────────────────
     // All three X fields at 0 → the whole component contributes 0.
-    let x_sub: u32 = if profile.x_followers == 0 && profile.x_posts == 0 && profile.x_replies == 0 {
+    let x_sub: u32 = if profile.x_followers == 0 && profile.x_engagement_avg == 0 {
         0
     } else {
         // Followers half (0–50): saturates at 2 500 followers.
         let follower_part = (profile.x_followers / 50).min(50);
 
-        // Activity half (0–50): replies weight 1.5× — integer math: replies×3/2.
-        let weighted_replies = profile.x_replies.saturating_mul(3) / 2;
-        let activity_raw = profile.x_posts.saturating_add(weighted_replies);
-        let activity_part = (activity_raw / 10).min(50);
+        // Engagement half (0–50): saturates at an average engagement of 500.
+        let engagement_part = (profile.x_engagement_avg / 10).min(50);
 
-        follower_part + activity_part // 0..=100
+        follower_part + engagement_part // 0..=100
     };
 
     // ── Account age sub-score (0–100) ─────────────────────────────────────────
@@ -127,11 +125,11 @@ pub fn get_tier(score: u32) -> CreditTier {
 /// Returns [`ContractError::NotRegistered`] when no profile exists for the
 /// given address.
 pub fn get_credit_tier(env: &Env, address: &Address) -> Result<(u32, CreditTier), ContractError> {
-    let profile: Profile = env
-        .storage()
-        .instance()
-        .get(&DataKey::Profile(address.clone()))
-        .ok_or(ContractError::NotRegistered)?;
+    if !storage::has_profile(env, address) {
+        return Err(ContractError::NotRegistered);
+    }
+
+    let profile: Profile = storage::get_profile(env, address);
 
     let now = env.ledger().timestamp();
     let score = calculate_credit_score(&profile, now);

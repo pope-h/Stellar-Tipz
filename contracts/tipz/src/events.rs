@@ -29,3 +29,10 @@ pub fn emit_tip_sent(env: &Env, from: &Address, to: &Address, amount: i128) {
         (from, to, amount),
     );
 }
+
+pub fn emit_credit_score_updated(env: &Env, address: &Address, old_score: u32, new_score: u32) {
+    env.events().publish(
+        (symbol_short!("credit"), symbol_short!("updated")),
+        (address.clone(), old_score, new_score),
+    );
+}

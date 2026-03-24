@@ -257,6 +257,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "x_engagement_avg"
+                      },
+                      "val": {
+                        "u32": 0
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "x_followers"
                       },
                       "val": {
@@ -269,22 +277,6 @@
                       },
                       "val": {
                         "string": "alice_x"
-                      }
-                    },
-                    {
-                      "key": {
-                        "symbol": "x_posts"
-                      },
-                      "val": {
-                        "u32": 0
-                      }
-                    },
-                    {
-                      "key": {
-                        "symbol": "x_replies"
-                      },
-                      "val": {
-                        "u32": 0
                       }
                     }
                   ]
@@ -429,6 +421,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "x_engagement_avg"
+                      },
+                      "val": {
+                        "u32": 0
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "x_followers"
                       },
                       "val": {
@@ -441,22 +441,6 @@
                       },
                       "val": {
                         "string": ""
-                      }
-                    },
-                    {
-                      "key": {
-                        "symbol": "x_posts"
-                      },
-                      "val": {
-                        "u32": 0
-                      }
-                    },
-                    {
-                      "key": {
-                        "symbol": "x_replies"
-                      },
-                      "val": {
-                        "u32": 0
                       }
                     }
                   ]
@@ -549,6 +533,60 @@
                         },
                         "val": {
                           "address": "CBUSYNQKASUYFWYC3M2GUEDMX4AIVWPALDBYJPNK6554BREHTGZ2IUNF"
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "TipCount"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "u32": 0
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "TotalCreators"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "u32": 0
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "TotalFeesCollected"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "i128": {
+                            "hi": 0,
+                            "lo": 0
+                          }
+                        }
+                      },
+                      {
+                        "key": {
+                          "vec": [
+                            {
+                              "symbol": "TotalTipsVolume"
+                            }
+                          ]
+                        },
+                        "val": {
+                          "i128": {
+                            "hi": 0,
+                            "lo": 0
+                          }
                         }
                       }
                     ]

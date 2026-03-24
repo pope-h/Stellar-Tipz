@@ -39,8 +39,7 @@ fn blank_profile(env: &Env, now: u64) -> Profile {
         image_url: String::from_str(env, ""),
         x_handle: String::from_str(env, ""),
         x_followers: 0,
-        x_posts: 0,
-        x_replies: 0,
+        x_engagement_avg: 0,
         credit_score: 0,
         total_tips_received: 0,
         total_tips_count: 0,
@@ -163,8 +162,7 @@ fn zero_x_metrics_contributes_zero_x_component() {
     let mut profile = blank_profile(&env, now);
     // Explicitly all zeroed (they already are, but make intent clear).
     profile.x_followers = 0;
-    profile.x_posts = 0;
-    profile.x_replies = 0;
+    profile.x_engagement_avg = 0;
 
     // X component must be 0; only base applies.
     assert_eq!(calculate_credit_score(&profile, now), BASE_SCORE);
@@ -217,26 +215,21 @@ fn age_one_hundred_days_contributes_full_age_points() {
 }
 
 #[test]
-fn reply_weight_applied_at_one_point_five_x() {
-    // replies×3/2 should be equivalent to replies×1.5 in integer arithmetic.
+fn higher_engagement_increases_score() {
     let env = Env::default();
     let now = env.ledger().timestamp();
-    let mut p_posts_only = blank_profile(&env, now);
-    p_posts_only.x_posts = 100;
-    p_posts_only.x_replies = 0;
+    let mut low_engagement = blank_profile(&env, now);
+    low_engagement.x_engagement_avg = 100;
 
-    let mut p_replies_only = blank_profile(&env, now);
-    p_replies_only.x_posts = 0;
-    p_replies_only.x_replies = 100;
+    let mut high_engagement = blank_profile(&env, now);
+    high_engagement.x_engagement_avg = 200;
 
-    // posts_only: activity_raw = 100, activity_part = min(100/10, 50) = 10
-    // replies_only: activity_raw = 100*3/2 = 150, activity_part = min(150/10, 50) = 15
-    let score_posts = calculate_credit_score(&p_posts_only, now);
-    let score_replies = calculate_credit_score(&p_replies_only, now);
+    let low_score = calculate_credit_score(&low_engagement, now);
+    let high_score = calculate_credit_score(&high_engagement, now);
 
     assert!(
-        score_replies > score_posts,
-        "replies should score higher than equal number of posts"
+        high_score > low_score,
+        "higher engagement should increase the score"
     );
 }
 
@@ -250,8 +243,7 @@ fn score_never_exceeds_100() {
     profile.registered_at = registered_at;
     profile.total_tips_received = i128::MAX;
     profile.x_followers = u32::MAX;
-    profile.x_posts = u32::MAX;
-    profile.x_replies = u32::MAX;
+    profile.x_engagement_avg = u32::MAX;
 
     let score = calculate_credit_score(&profile, now);
     assert!(score <= 100, "score {score} exceeded maximum of 100");
@@ -267,11 +259,10 @@ fn max_x_metrics_contribute_30_x_points() {
     let now = env.ledger().timestamp();
     let mut profile = blank_profile(&env, now);
     profile.x_followers = 2_500; // saturates follower_part
-    profile.x_posts = 500; // saturates activity_part
-    profile.x_replies = 0;
+    profile.x_engagement_avg = 500; // saturates engagement_part
 
     // x_sub: follower_part = min(2500/50, 50) = 50
-    //        activity_part = min(500/10, 50)  = 50
+    //        engagement_part = min(500/10, 50) = 50
     //        x_sub = 100, x_pts = 30
     let score = calculate_credit_score(&profile, now);
     assert_eq!(score, BASE_SCORE + 30); // 40 + 30 = 70
@@ -302,7 +293,7 @@ fn get_credit_tier_returns_silver_for_new_profile() {
         let profile = blank_profile(&env, now);
 
         env.storage()
-            .instance()
+            .persistent()
             .set(&DataKey::Profile(address.clone()), &profile);
 
         let (score, tier) = get_credit_tier(&env, &address).expect("profile should exist");
@@ -324,7 +315,7 @@ fn get_credit_tier_reflects_tip_volume() {
         profile.total_tips_received = 500_000_000;
 
         env.storage()
-            .instance()
+            .persistent()
             .set(&DataKey::Profile(address.clone()), &profile);
 
         let (score, tier) = get_credit_tier(&env, &address).expect("profile should exist");

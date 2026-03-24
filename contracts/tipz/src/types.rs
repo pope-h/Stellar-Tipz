@@ -20,10 +20,8 @@ pub struct Profile {
     pub x_handle: String,
     /// X follower count (set by admin)
     pub x_followers: u32,
-    /// X post count (set by admin)
-    pub x_posts: u32,
-    /// X reply count (set by admin)
-    pub x_replies: u32,
+    /// Average X engagement per post (set by admin)
+    pub x_engagement_avg: u32,
     /// Credit score (0-100)
     pub credit_score: u32,
     /// Lifetime tips received (in stroops)

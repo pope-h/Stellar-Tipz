@@ -68,11 +68,15 @@ impl TipzContract {
         image_url: String,
         x_handle: String,
     ) -> Result<Profile, ContractError> {
-        // Validate username format (issue #4)
-        crate::validation::validate_username(&_username)?;
-
-        // TODO: Implement remaining logic in issue #1 - Profile Registration
-        Err(ContractError::NotInitialized)
+        profile::register_profile(
+            &env,
+            caller,
+            username,
+            display_name,
+            bio,
+            image_url,
+            x_handle,
+        )
     }
 
     /// Update an existing profile (owner only).
@@ -90,27 +94,29 @@ impl TipzContract {
 
     /// Update X (Twitter) metrics for a creator (admin only).
     pub fn update_x_metrics(
-        _env: Env,
-        _caller: Address,
-        _target: Address,
-        _followers: u32,
-        _posts: u32,
-        _replies: u32,
+        env: Env,
+        caller: Address,
+        creator: Address,
+        x_followers: u32,
+        x_engagement_avg: u32,
     ) -> Result<(), ContractError> {
-        // TODO: Implement in issue #15 - X Metrics Update
-        Err(ContractError::NotInitialized)
+        admin::update_x_metrics(&env, &caller, &creator, x_followers, x_engagement_avg)
     }
 
     /// Get a profile by address.
-    pub fn get_profile(_env: Env, _address: Address) -> Result<Profile, ContractError> {
-        // TODO: Implement in issue #4 - Profile Queries
-        Err(ContractError::NotInitialized)
+    pub fn get_profile(env: Env, address: Address) -> Result<Profile, ContractError> {
+        if !storage::has_profile(&env, &address) {
+            return Err(ContractError::NotRegistered);
+        }
+
+        Ok(storage::get_profile(&env, &address))
     }
 
     /// Get a profile by username.
-    pub fn get_profile_by_username(_env: Env, _username: String) -> Result<Profile, ContractError> {
-        // TODO: Implement in issue #5 - Username Lookup
-        Err(ContractError::NotInitialized)
+    pub fn get_profile_by_username(env: Env, username: String) -> Result<Profile, ContractError> {
+        let address =
+            storage::get_username_address(&env, &username).ok_or(ContractError::NotFound)?;
+        Ok(storage::get_profile(&env, &address))
     }
 
     // ──────────────────────────────────────────────
@@ -155,9 +161,17 @@ impl TipzContract {
     // ──────────────────────────────────────────────
 
     /// Calculate and return the credit score for a profile.
-    pub fn calculate_credit_score(_env: Env, _address: Address) -> Result<u32, ContractError> {
-        // TODO: Implement in issue #13 - Credit Score Calculation
-        Err(ContractError::NotInitialized)
+    pub fn calculate_credit_score(env: Env, address: Address) -> Result<u32, ContractError> {
+        if !storage::has_profile(&env, &address) {
+            return Err(ContractError::NotRegistered);
+        }
+
+        let mut profile = storage::get_profile(&env, &address);
+        let score = credit::calculate_credit_score(&profile, env.ledger().timestamp());
+        profile.credit_score = score;
+        storage::set_profile(&env, &profile);
+
+        Ok(score)
     }
 
     /// Return the current credit score and tier for a registered profile.

@@ -51,8 +51,7 @@ fn setup_env() -> (Env, TipzContractClient<'static>, Address, Address, Address) 
         image_url: String::from_str(&env, ""),
         x_handle: String::from_str(&env, "alice_x"),
         x_followers: 0,
-        x_posts: 0,
-        x_replies: 0,
+        x_engagement_avg: 0,
         credit_score: 0,
         total_tips_received: 0,
         total_tips_count: 0,
@@ -97,8 +96,8 @@ fn test_send_tip_success() {
     // Verify tip record was created in temporary storage
     env.as_contract(&contract_id, || {
         let tip: Tip = env.storage().temporary().get(&DataKey::Tip(0)).unwrap();
-        assert_eq!(tip.from, tipper);
-        assert_eq!(tip.to, creator);
+        assert_eq!(tip.tipper, tipper);
+        assert_eq!(tip.creator, creator);
         assert_eq!(tip.amount, amount);
     });
 
@@ -141,8 +140,7 @@ fn test_send_tip_cannot_tip_self() {
         image_url: String::from_str(&env, ""),
         x_handle: String::from_str(&env, ""),
         x_followers: 0,
-        x_posts: 0,
-        x_replies: 0,
+        x_engagement_avg: 0,
         credit_score: 0,
         total_tips_received: 0,
         total_tips_count: 0,
