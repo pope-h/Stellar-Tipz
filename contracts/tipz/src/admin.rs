@@ -15,14 +15,11 @@ pub fn require_admin(env: &Env, caller: &Address) -> Result<(), ContractError> {
     if !storage::is_initialized(env) {
         return Err(ContractError::NotInitialized);
     }
-
     let admin = storage::get_admin(env);
     if caller != &admin {
         return Err(ContractError::NotAuthorized);
     }
-
     caller.require_auth();
-
     Ok(())
 }
 
@@ -37,11 +34,9 @@ pub fn initialize(
     if storage::is_initialized(env) {
         return Err(ContractError::AlreadyInitialized);
     }
-
     if fee_bps > 1000 {
         return Err(ContractError::InvalidFee);
     }
-
     storage::set_initialized(env);
     storage::set_admin(env, admin);
     storage::set_fee_collector(env, fee_collector);
@@ -100,13 +95,10 @@ pub fn update_x_metrics(
     x_engagement_avg: u32,
 ) -> Result<(), ContractError> {
     require_admin(env, caller)?;
-
     if !storage::has_profile(env, creator) {
         return Err(ContractError::NotRegistered);
     }
-
     apply_x_metrics_to_profile(env, creator, x_followers, x_engagement_avg);
-
     Ok(())
 }
 
@@ -121,12 +113,10 @@ pub fn batch_update_x_metrics(
     updates: Vec<(Address, u32, u32)>,
 ) -> Result<u32, ContractError> {
     require_admin(env, caller)?;
-
     let len = updates.len();
     if len > MAX_X_METRICS_BATCH_LEN {
         return Err(ContractError::BatchTooLarge);
     }
-
     let mut updated: u32 = 0;
     let mut i: u32 = 0;
     while i < len {
@@ -139,8 +129,69 @@ pub fn batch_update_x_metrics(
         }
         i += 1;
     }
-
     Ok(updated)
 }
 
-// TODO: Implement set_fee, set_fee_collector, set_admin in issues #20, #21, #22
+/// Update the withdrawal fee in basis points. Admin only.
+///
+/// `new_fee_bps` must be ≤ 1000 (10 %). Emits a `FeeUpdated` event carrying
+/// `(old_bps, new_bps)`.
+pub fn set_fee(env: &Env, caller: &Address, new_fee_bps: u32) -> Result<(), ContractError> {
+    // 1. Authenticate + authorise
+    require_admin(env, caller)?;
+
+    // 2. Validate: max 1000 bps (10 %)
+    if new_fee_bps > 1000 {
+        return Err(ContractError::InvalidFee);
+    }
+
+    // 3. Read old value before overwriting (needed for the event)
+    let old_bps = storage::get_fee_bps(env);
+
+    // 4. Persist
+    storage::set_fee_bps(env, new_fee_bps);
+
+    // 5. Emit FeeUpdated(old_bps, new_bps)
+    events::emit_fee_updated(env, old_bps, new_fee_bps);
+
+    Ok(())
+}
+
+/// Update the address that receives platform fees. Admin only.
+///
+/// Emits a `FeeCollectorUpdated` event carrying the new collector address.
+pub fn set_fee_collector(
+    env: &Env,
+    caller: &Address,
+    new_collector: &Address,
+) -> Result<(), ContractError> {
+    // 1. Authenticate + authorise
+    require_admin(env, caller)?;
+
+    // 2. Persist
+    storage::set_fee_collector(env, new_collector);
+
+    // 3. Emit FeeCollectorUpdated(new_collector)
+    events::emit_fee_collector_updated(env, new_collector);
+
+    Ok(())
+}
+
+/// Transfer the admin role to a new address. Admin only.
+///
+/// Emits an `AdminChanged` event carrying `(old_admin, new_admin)`.
+pub fn set_admin(env: &Env, caller: &Address, new_admin: &Address) -> Result<(), ContractError> {
+    // 1. Authenticate + authorise (uses the *current* admin)
+    require_admin(env, caller)?;
+
+    // 2. Capture old admin for the event before overwriting
+    let old_admin = storage::get_admin(env);
+
+    // 3. Persist new admin
+    storage::set_admin(env, new_admin);
+
+    // 4. Emit AdminChanged(old_admin, new_admin)
+    events::emit_admin_changed(env, &old_admin, new_admin);
+
+    Ok(())
+}

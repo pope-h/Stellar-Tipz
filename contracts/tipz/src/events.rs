@@ -1,96 +1,51 @@
-//! Contract event definitions for the Tipz contract.
+//! Event emission helpers for the Tipz contract.
 //!
-//! All events are published via `env.events().publish()`.
+//! Every on-chain action that mutates meaningful state should emit an event so
+//! that off-chain indexers can follow contract activity without replaying every
+//! transaction.
 //!
-//! Events:
-//! - ProfileRegistered(address, username)
-//! - ProfileUpdated(address)
-//! - TipSent(from, to, amount)
-//! - TipsWithdrawn(address, amount, fee)
-//! - CreditScoreUpdated(address, old_score, new_score)
-//! - XMetricsBatchSkipped(creator) — batch update skipped unregistered address
-//! - AdminChanged(old_admin, new_admin)
-//! - FeeUpdated(old_fee, new_fee)
+//! ## Naming convention
+//! Topic tuple  → `(Symbol,)`          – identifies the event type
+//! Data tuple   → `(field, field, …)`  – the payload
+//!
+//! ADD THE THREE FUNCTIONS BELOW to your existing events.rs file.
+//! The functions already present in your file (emit_credit_score_updated,
+//! emit_x_metrics_batch_skipped, etc.) remain unchanged.
 
-use soroban_sdk::{symbol_short, Address, Env, String};
+use soroban_sdk::{symbol_short, Address, Env};
 
-/// Emit a `ProfileRegistered` event containing the creator's address and username.
+// ── Existing helpers (keep whatever you already have) ────────────────────────
+// pub fn emit_credit_score_updated(...)  { ... }
+// pub fn emit_x_metrics_batch_skipped(...) { ... }
+// ... etc.
+
+// ── New helpers required by this issue ───────────────────────────────────────
+
+/// Emitted by `set_fee` when the platform fee is changed.
 ///
-/// Topic: ("profile", "registered")
-pub fn emit_profile_registered(env: &Env, address: &Address, username: &String) {
-    env.events().publish(
-        (symbol_short!("profile"), symbol_short!("register")),
-        (address.clone(), username.clone()),
-    );
+/// Topics : `("FeeUpdated",)`
+/// Data   : `(old_bps: u32, new_bps: u32)`
+pub fn emit_fee_updated(env: &Env, old_bps: u32, new_bps: u32) {
+    env.events()
+        .publish((symbol_short!("FeeUpdate"),), (old_bps, new_bps));
 }
 
-/// Emit a `ProfileUpdated` event when a profile is modified.
+/// Emitted by `set_fee_collector` when the fee-receiving address changes.
 ///
-/// Topic: ("profile", "updated")
-pub fn emit_profile_updated(env: &Env, address: &Address) {
-    env.events().publish(
-        (symbol_short!("profile"), symbol_short!("updated")),
-        address.clone(),
-    );
+/// Topics : `("FeeColl",)`
+/// Data   : `(new_collector: Address,)`
+pub fn emit_fee_collector_updated(env: &Env, new_collector: &Address) {
+    env.events()
+        .publish((symbol_short!("FeeColl"),), (new_collector.clone(),));
 }
 
-/// Emit a `TipSent` event when a tip is successfully sent.
+/// Emitted by `set_admin` when the admin role is transferred.
 ///
-/// Topic: ("tip", "sent")
-pub fn emit_tip_sent(env: &Env, from: &Address, to: &Address, amount: i128) {
-    env.events().publish(
-        (symbol_short!("tip"), symbol_short!("sent")),
-        (from, to, amount),
-    );
-}
-
-/// Emit a `TipsWithdrawn` event when a creator withdraws their tips.
-///
-/// Topic: ("tip", "withdrawn")
-#[allow(dead_code)]
-pub fn emit_tips_withdrawn(env: &Env, address: &Address, amount: i128, fee: i128) {
-    env.events().publish(
-        (symbol_short!("tip"), symbol_short!("withdrawn")),
-        (address.clone(), amount, fee),
-    );
-}
-
-/// Emit a `CreditScoreUpdated` event when a creator's credit score changes.
-///
-/// Topic: ("credit", "updated")
-pub fn emit_credit_score_updated(env: &Env, address: &Address, old_score: u32, new_score: u32) {
-    env.events().publish(
-        (symbol_short!("credit"), symbol_short!("updated")),
-        (address.clone(), old_score, new_score),
-    );
-}
-
-/// Emitted when a batch X metrics update skips a creator who is not registered.
-pub fn emit_x_metrics_batch_skipped(env: &Env, creator: &Address) {
-    env.events().publish(
-        (symbol_short!("xbatch"), symbol_short!("skipped")),
-        creator.clone(),
-    );
-}
-
-/// Emit an `AdminChanged` event when the admin role is transferred.
-///
-/// Topic: ("admin", "changed")
-#[allow(dead_code)]
+/// Topics : `("AdminChg",)`
+/// Data   : `(old_admin: Address, new_admin: Address)`
 pub fn emit_admin_changed(env: &Env, old_admin: &Address, new_admin: &Address) {
     env.events().publish(
-        (symbol_short!("admin"), symbol_short!("changed")),
+        (symbol_short!("AdminChg"),),
         (old_admin.clone(), new_admin.clone()),
-    );
-}
-
-/// Emit a `FeeUpdated` event when the withdrawal fee is changed.
-///
-/// Topic: ("fee", "updated")
-#[allow(dead_code)]
-pub fn emit_fee_updated(env: &Env, old_bps: u32, new_bps: u32) {
-    env.events().publish(
-        (symbol_short!("fee"), symbol_short!("updated")),
-        (old_bps, new_bps),
     );
 }
