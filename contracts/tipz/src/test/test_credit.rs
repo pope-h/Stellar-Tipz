@@ -323,3 +323,149 @@ fn get_credit_tier_reflects_tip_volume() {
         assert_eq!(tier, CreditTier::Silver);
     });
 }
+
+// ── Contract-specific test requirements ───────────────────────────────────────
+
+#[test]
+fn test_credit_score_new_profile() {
+    // Fresh profile → score 40
+    let env = Env::default();
+    let now = env.ledger().timestamp();
+    let profile = blank_profile(&env, now);
+
+    assert_eq!(calculate_credit_score(&profile, now), 40);
+}
+
+#[test]
+fn test_credit_score_after_tips() {
+    // Profile with various tip amounts → verify weighted calculation
+    let env = Env::default();
+    let now = env.ledger().timestamp();
+
+    // Test with 25 XLM in tips
+    let mut profile = blank_profile(&env, now);
+    profile.total_tips_received = 250_000_000; // 25 XLM
+
+    // tip_sub = 25, tip_pts = 25 * 20 / 100 = 5
+    // score = 40 + 5 = 45
+    assert_eq!(calculate_credit_score(&profile, now), 45);
+
+    // Test with 75 XLM in tips
+    profile.total_tips_received = 750_000_000; // 75 XLM
+
+    // tip_sub = 75, tip_pts = 75 * 20 / 100 = 15
+    // score = 40 + 15 = 55
+    assert_eq!(calculate_credit_score(&profile, now), 55);
+}
+
+#[test]
+fn test_credit_score_max() {
+    // Profile with maximum activity → score approaches 100
+    let env = Env::default();
+    let registered_at = 0_u64;
+    let now = 86_400_u64 * 1000; // 1000 days old
+    let mut profile = blank_profile(&env, now);
+    profile.registered_at = registered_at;
+    profile.total_tips_received = 1_000_000_000; // 100 XLM (max tip sub-score)
+    profile.x_followers = 2_500; // Max follower contribution
+    profile.x_engagement_avg = 500; // Max engagement contribution
+
+    // tip_sub = 100, tip_pts = 20
+    // x_sub = 100, x_pts = 30
+    // age_sub = 100, age_pts = 10
+    // score = 40 + 20 + 30 + 10 = 100
+    assert_eq!(calculate_credit_score(&profile, now), 100);
+}
+
+#[test]
+fn test_credit_score_zero_x_metrics() {
+    // Profile with no X data → only on-chain metrics counted
+    let env = Env::default();
+    let now = env.ledger().timestamp();
+    let mut profile = blank_profile(&env, now);
+    profile.total_tips_received = 500_000_000; // 50 XLM
+    profile.x_followers = 0;
+    profile.x_engagement_avg = 0;
+
+    // tip_sub = 50, tip_pts = 10
+    // x_sub = 0, x_pts = 0
+    // score = 40 + 10 + 0 = 50
+    assert_eq!(calculate_credit_score(&profile, now), 50);
+}
+
+#[test]
+fn test_credit_score_tiers() {
+    // Verify correct tier assignment at boundaries (0, 19, 20, 39, 40, 59, 60, 79, 80, 100)
+
+    // Test each boundary individually
+    assert_eq!(get_tier(0), CreditTier::New);
+    assert_eq!(get_tier(19), CreditTier::New);
+    assert_eq!(get_tier(20), CreditTier::Bronze);
+    assert_eq!(get_tier(39), CreditTier::Bronze);
+    assert_eq!(get_tier(40), CreditTier::Silver);
+    assert_eq!(get_tier(59), CreditTier::Silver);
+    assert_eq!(get_tier(60), CreditTier::Gold);
+    assert_eq!(get_tier(79), CreditTier::Gold);
+    assert_eq!(get_tier(80), CreditTier::Diamond);
+    assert_eq!(get_tier(100), CreditTier::Diamond);
+}
+
+#[test]
+fn test_credit_score_consistency_weight() {
+    // Verify consistency sub-score calculation (X metrics component)
+    let env = Env::default();
+    let now = env.ledger().timestamp();
+
+    // Test followers contribution
+    let mut profile = blank_profile(&env, now);
+    profile.x_followers = 100; // 100/50 = 2, min(2, 50) = 2
+    profile.x_engagement_avg = 0;
+
+    // x_sub = 2, x_pts = 2 * 30 / 100 = 0 (integer division)
+    assert_eq!(calculate_credit_score(&profile, now), 40);
+
+    // Test engagement contribution
+    profile.x_followers = 0;
+    profile.x_engagement_avg = 100; // 100/10 = 10, min(10, 50) = 10
+
+    // x_sub = 10, x_pts = 10 * 30 / 100 = 3
+    assert_eq!(calculate_credit_score(&profile, now), 43);
+
+    // Test combined contribution
+    profile.x_followers = 100; // follower_part = 2
+    profile.x_engagement_avg = 100; // engagement_part = 10
+                                    // x_sub = 12, x_pts = 12 * 30 / 100 = 3
+    assert_eq!(calculate_credit_score(&profile, now), 43);
+}
+
+#[test]
+fn test_credit_score_integer_arithmetic() {
+    // Ensure no rounding errors lead to score > 100
+    let env = Env::default();
+    let registered_at = 0_u64;
+    let now = 86_400_u64 * 1000; // 1000 days old
+    let mut profile = blank_profile(&env, now);
+    profile.registered_at = registered_at;
+
+    // Use values that could cause rounding issues
+    profile.total_tips_received = 999_999_999; // Just under max
+    profile.x_followers = 2_499; // Just under max
+    profile.x_engagement_avg = 499; // Just under max
+
+    let score = calculate_credit_score(&profile, now);
+    assert!(
+        score <= 100,
+        "Score should not exceed 100 due to integer arithmetic"
+    );
+
+    // Test with maximum values
+    profile.total_tips_received = i128::MAX;
+    profile.x_followers = u32::MAX;
+    profile.x_engagement_avg = u32::MAX;
+
+    let score = calculate_credit_score(&profile, now);
+    assert_eq!(
+        score, 100,
+        "Even with max values, score should be capped at 100"
+    );
+}
