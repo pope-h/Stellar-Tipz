@@ -11,9 +11,6 @@ permissions:
 jobs:
   contract:
     name: Contract Checks
-    if: |
-      contains(github.event.pull_request.labels.*.name, 'contract') ||
-      !contains(github.event.pull_request.labels.*.name, 'frontend-only')
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -50,9 +47,6 @@ jobs:
 
   frontend:
     name: Frontend Checks
-    if: |
-      contains(github.event.pull_request.labels.*.name, 'frontend') ||
-      !contains(github.event.pull_request.labels.*.name, 'contract-only')
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
